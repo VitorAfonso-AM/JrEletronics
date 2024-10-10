@@ -1,4 +1,5 @@
 export interface Task {
+  id: number
   name: string;
   desc: string;
   initDate: string;
@@ -9,6 +10,7 @@ export interface Task {
 
 export const Tasks: Task[] = [
   {
+    id: 1,
     name: "Task 1",
     desc: "Description for task 1",
     initDate: "2024-10-01",
@@ -17,6 +19,7 @@ export const Tasks: Task[] = [
     TeamMembers: "Member A, Member B",
   },
   {
+    id: 2,
     name: "Task 2",
     desc: "Description for task 2",
     initDate: "2024-10-02",
@@ -25,6 +28,7 @@ export const Tasks: Task[] = [
     TeamMembers: "Member C",
   },
   {
+    id: 3,
     name: "Task 3",
     desc: "Description for task 3",
     initDate: "2024-10-03",
@@ -33,6 +37,7 @@ export const Tasks: Task[] = [
     TeamMembers: "Member D",
   },
   {
+    id: 4,
     name: "Task 4",
     desc: "Description for task 4",
     initDate: "2024-10-04",
@@ -41,6 +46,7 @@ export const Tasks: Task[] = [
     TeamMembers: "Member E, Member F",
   },
   {
+    id: 5,
     name: "Task 5",
     desc: "Description for task 5",
     initDate: "2024-10-05",
@@ -49,6 +55,7 @@ export const Tasks: Task[] = [
     TeamMembers: "Member G",
   },
   {
+    id: 6,
     name: "Task 6",
     desc: "Description for task 6",
     initDate: "2024-10-06",
@@ -57,6 +64,7 @@ export const Tasks: Task[] = [
     TeamMembers: "Member H, Member I",
   },
   {
+    id: 7,
     name: "Task 7",
     desc: "Description for task 7",
     initDate: "2024-10-07",
@@ -65,6 +73,7 @@ export const Tasks: Task[] = [
     TeamMembers: "Member J",
   },
   {
+    id: 8,
     name: "Task 8",
     desc: "Description for task 8",
     initDate: "2024-10-08",

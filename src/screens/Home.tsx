@@ -1,133 +1,499 @@
-import { useState, useEffect } from 'react';
-import { FlatList, Text, TextInput, View, SafeAreaView, StyleSheet, Button, Modal, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useRef } from "react";
+import {
+  FlatList,
+  Text,
+  TextInput,
+  View,
+  SafeAreaView,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+  Animated,
+} from "react-native";
 import { Task, Tasks } from "@hooks/useGetTasks";
 
+const generateRandomId = () => Math.floor(100000 + Math.random() * 900000);
+
 export default function Home() {
-    const [text, onChangeText] = useState('');
-    const [createTask, setCreateTask] = useState<boolean>(false);
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
-    const [newTask, setNewTask] = useState<Task>({
-        name: '',
-        desc: '',
-        initDate: '',
-        endDate: '',
-        dificult: '',
-        TeamMembers: '',
-    });
+  const [text, onChangeText] = useState("");
+  const [createTaskModal, setCreateTaskModal] = useState<boolean>(false);
+  const [editTaskModal, setEditTaskModal] = useState<boolean>(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  const [newTask, setNewTask] = useState<Task>({
+    id: generateRandomId(),
+    name: "",
+    desc: "",
+    initDate: "",
+    endDate: "",
+    dificult: "",
+    TeamMembers: "",
+  });
+  const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<string | null>(null);
 
-    useEffect(() => {
-        setTasks(Tasks);
-        setFilteredTasks(Tasks);
-    }, []);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-    useEffect(() => {
-        const filtered = tasks.filter(task =>
-            task.name.toLowerCase().includes(text.toLowerCase())
+  useEffect(() => {
+    setTasks(Tasks);
+    setFilteredTasks(Tasks);
+  }, []);
+
+  useEffect(() => {
+    const filtered = tasks
+      .filter((task) => task.name.toLowerCase().includes(text.toLowerCase()))
+      .sort((a, b) => {
+        return a.name.localeCompare(b.name, undefined, { numeric: true });
+      });
+
+    setFilteredTasks(filtered);
+  }, [text, tasks]);
+
+  const clearMessage = () => {
+    setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => setMessage(null));
+    }, 3000);
+  };
+
+  const showMessage = (msg: string) => {
+    setMessage(msg);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+    clearMessage();
+  };
+
+  const handleCreateTask = () => {
+    setCreateTaskModal(false);
+    setLoading(true);
+    const existingIds = tasks.map((task) => task.id);
+    let newId = generateRandomId();
+
+    while (existingIds.includes(newId)) {
+      newId = generateRandomId();
+    }
+
+    setTimeout(() => {
+      setTasks([...tasks, { ...newTask, id: newId }]);
+      setFilteredTasks([...tasks, { ...newTask, id: newId }]);
+      setNewTask({
+        id: generateRandomId(),
+        name: "",
+        desc: "",
+        initDate: "",
+        endDate: "",
+        dificult: "",
+        TeamMembers: "",
+      });
+      setLoading(false);
+      showMessage("Tarefa criada com sucesso!");
+    }, 5000);
+  };
+
+  const handleEditTask = () => {
+    setEditTaskModal(false);
+    setLoading(true);
+    if (currentTask) {
+      setTimeout(() => {
+        const updatedTasks = tasks.map((task) =>
+          task.id === currentTask.id ? currentTask : task
         );
-        setFilteredTasks(filtered);
-    }, [text, tasks]);
+        setTasks(updatedTasks);
+        setFilteredTasks(updatedTasks);
+        setLoading(false);
+        showMessage("Tarefa editada com sucesso!");
+      }, 5000);
+    }
+  };
 
-    const renderItem = ({ item }: { item: Task }) => (
-        <View className='bg-white p-4 mb-4 rounded-lg shadow'>
-            <Text className='font-bold text-lg'>{item.name}</Text>
-            <Text>{item.desc}</Text>
-            <Text>Início: {item.initDate}</Text>
-            <Text>Fim: {item.endDate}</Text>
-            <Text>Dificuldade: {item.dificult}</Text>
-            <Text>Membros da Equipe: {item.TeamMembers}</Text>
+  const renderItem = ({ item }: { item: Task }) => (
+    <TouchableOpacity
+      style={styles.taskItem}
+      onPress={() => {
+        setCurrentTask(item);
+        setEditTaskModal(true);
+      }}
+    >
+      <Text style={styles.taskTitle}>{item.name}</Text>
+      <Text>{item.desc}</Text>
+      <Text>Início: {item.initDate}</Text>
+      <Text>Fim: {item.endDate}</Text>
+      <Text>Dificuldade: {item.dificult}</Text>
+      <Text>Membros da Equipe: {item.TeamMembers}</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+
+      <View style={styles.header}>
+        <Text style={styles.headerText}>My Tasks</Text>
+      </View>
+
+      {/* Header */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          onChangeText={onChangeText}
+          value={text}
+          placeholder="Search tasks..."
+          style={styles.input}
+        />
+        <TouchableOpacity
+          onPress={() => setCreateTaskModal(true)}
+          style={styles.createButton}
+        >
+          <Text style={styles.buttonText}>Create New Task</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Container dos cards*/}
+      <FlatList
+        style={styles.flatList}
+        contentContainerStyle={styles.flatListContent}
+        data={filteredTasks}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id.toString()}
+      />
+
+      {message && (
+        <Animated.View style={[styles.messageContainer, { opacity: fadeAnim }]}>
+          <Text style={styles.messageText}>{message}</Text>
+        </Animated.View>
+      )}
+
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#000" />
         </View>
-    );
+      )}
 
-    const handleCreateTask = () => {
-        setTasks([...tasks, newTask]);
-        setFilteredTasks([...tasks, newTask]);
-        setCreateTask(false); // Fecha o modal
-        setNewTask({ name: '', desc: '', initDate: '', endDate: '', dificult: '', TeamMembers: '' });
-    };
-
-    return (
-        <SafeAreaView className='flex-1 w-full items-center bg-gray-100'>
-
-            <View className='w-full h-[80px] bg-white flex items-center justify-end'>
-                <Text className='text-lg font-semibold'>Tasks da semana</Text>
-            </View>
-
-            <View className='flex flex-col w-full justify-between p-2'>
-                <TextInput
-                    onChangeText={onChangeText}
-                    value={text}
-                    placeholder="Search tasks..."
-                    className="border border-gray-300 p-2 rounded mb-4"
-                />
-                <Button
-                    onPress={() => setCreateTask(true)} // Abre o modal
-                    title="Create New Task"
-                    color="#000"
-                    accessibilityLabel="Create New Tasks"
-                />
-            </View>
-
-            <FlatList
-                className='w-full p-2'
-                data={filteredTasks}
-                renderItem={renderItem}
-                keyExtractor={(item, index) => index.toString()}
+      {/* Modal de Criação */}
+      <Modal
+        transparent={true}
+        animationType="fade"
+        visible={createTaskModal}
+        onRequestClose={() => setCreateTaskModal(false)} // Permite fechar durante o loading
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setCreateTaskModal(false)} // Permite fechar durante o loading
+          style={styles.modalBackground}
+        >
+          <View
+            style={styles.modalContainer}
+            onStartShouldSetResponder={() => true}
+          >
+            <Text style={styles.modalTitle}>Create New Task</Text>
+            <TextInput
+              placeholder="Task Name"
+              onChangeText={(text) => setNewTask({ ...newTask, name: text })}
+              value={newTask.name}
+              style={styles.modalInput}
+              editable={!loading} // Desabilita enquanto carrega
             />
+            <TextInput
+              placeholder="Description"
+              onChangeText={(text) => setNewTask({ ...newTask, desc: text })}
+              value={newTask.desc}
+              style={styles.modalInput}
+              editable={!loading}
+            />
+            <TextInput
+              placeholder="Start Date (YYYY-MM-DD)"
+              onChangeText={(text) =>
+                setNewTask({ ...newTask, initDate: text })
+              }
+              value={newTask.initDate}
+              style={styles.modalInput}
+              editable={!loading}
+            />
+            <TextInput
+              placeholder="End Date (YYYY-MM-DD)"
+              onChangeText={(text) => setNewTask({ ...newTask, endDate: text })}
+              value={newTask.endDate}
+              style={styles.modalInput}
+              editable={!loading}
+            />
+            <TextInput
+              placeholder="Difficulty"
+              onChangeText={(text) =>
+                setNewTask({ ...newTask, dificult: text })
+              }
+              value={newTask.dificult}
+              style={styles.modalInput}
+              editable={!loading}
+            />
+            <TextInput
+              placeholder="Team Members"
+              onChangeText={(text) =>
+                setNewTask({ ...newTask, TeamMembers: text })
+              }
+              value={newTask.TeamMembers}
+              style={styles.modalInput}
+              editable={!loading}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalActionButton}
+                onPress={handleCreateTask}
+                disabled={loading} // Desativa o botão durante o loading
+              >
+                <Text style={styles.modalActionButtonText}>Create</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setCreateTaskModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
-            <Modal
-                transparent={true}
-                animationType="slide"
-                visible={createTask}
-                onRequestClose={() => setCreateTask(false)}
-            >
-                <View className="flex-1 justify-center items-center bg-gray-800 bg-opacity-50">
-                    <View className='bg-white w-11/12 p-4 rounded-lg shadow'>
-                        <Text className='text-lg font-semibold mb-4'>Create New Task</Text>
-                        <TextInput
-                            placeholder="Task Name"
-                            onChangeText={text => setNewTask({ ...newTask, name: text })}
-                            value={newTask.name}
-                            className="border border-gray-300 p-2 rounded mb-2"
-                        />
-                        <TextInput
-                            placeholder="Description"
-                            onChangeText={text => setNewTask({ ...newTask, desc: text })}
-                            value={newTask.desc}
-                            className="border border-gray-300 p-2 rounded mb-2"
-                        />
-                        <TextInput
-                            placeholder="Start Date (YYYY-MM-DD)"
-                            onChangeText={text => setNewTask({ ...newTask, initDate: text })}
-                            value={newTask.initDate}
-                            className="border border-gray-300 p-2 rounded mb-2"
-                        />
-                        <TextInput
-                            placeholder="End Date (YYYY-MM-DD)"
-                            onChangeText={text => setNewTask({ ...newTask, endDate: text })}
-                            value={newTask.endDate}
-                            className="border border-gray-300 p-2 rounded mb-2"
-                        />
-                        <TextInput
-                            placeholder="Difficulty"
-                            onChangeText={text => setNewTask({ ...newTask, dificult: text })}
-                            value={newTask.dificult}
-                            className="border border-gray-300 p-2 rounded mb-2"
-                        />
-                        <TextInput
-                            placeholder="Team Members"
-                            onChangeText={text => setNewTask({ ...newTask, TeamMembers: text })}
-                            value={newTask.TeamMembers}
-                            className="border border-gray-300 p-2 rounded mb-4"
-                        />
-                        <Button title="Create Task" onPress={handleCreateTask} />
-                        <TouchableOpacity onPress={() => setCreateTask(false)} className="mt-2">
-                            <Text className='text-red-500 text-center'>Cancel</Text>
-                        </TouchableOpacity>
-                    </View>
+      {/* Modal de Edição */}
+      <Modal
+        transparent={true}
+        animationType="fade"
+        visible={editTaskModal}
+        onRequestClose={() => !loading && setEditTaskModal(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => !loading && setEditTaskModal(false)}
+          style={styles.modalBackground}
+        >
+          <View
+            style={styles.modalContainer}
+            onStartShouldSetResponder={() => true}
+          >
+            <Text style={styles.modalTitle}>Edit Task</Text>
+            {currentTask && (
+              <>
+                <TextInput
+                  placeholder="Task ID"
+                  value={currentTask.id.toString()}
+                  editable={false}
+                  style={styles.modalInput}
+                />
+                <TextInput
+                  placeholder="Task Name"
+                  onChangeText={(text) =>
+                    setCurrentTask({ ...currentTask, name: text })
+                  }
+                  value={currentTask.name}
+                  style={styles.modalInput}
+                  editable={!loading} // Desabilita enquanto carrega
+                />
+                <TextInput
+                  placeholder="Description"
+                  onChangeText={(text) =>
+                    setCurrentTask({ ...currentTask, desc: text })
+                  }
+                  value={currentTask.desc}
+                  style={styles.modalInput}
+                  editable={!loading}
+                />
+                <TextInput
+                  placeholder="Start Date (YYYY-MM-DD)"
+                  onChangeText={(text) =>
+                    setCurrentTask({ ...currentTask, initDate: text })
+                  }
+                  value={currentTask.initDate}
+                  style={styles.modalInput}
+                  editable={!loading}
+                />
+                <TextInput
+                  placeholder="End Date (YYYY-MM-DD)"
+                  onChangeText={(text) =>
+                    setCurrentTask({ ...currentTask, endDate: text })
+                  }
+                  value={currentTask.endDate}
+                  style={styles.modalInput}
+                  editable={!loading}
+                />
+                <TextInput
+                  placeholder="Difficulty"
+                  onChangeText={(text) =>
+                    setCurrentTask({ ...currentTask, dificult: text })
+                  }
+                  value={currentTask.dificult}
+                  style={styles.modalInput}
+                  editable={!loading}
+                />
+                <TextInput
+                  placeholder="Team Members"
+                  onChangeText={(text) =>
+                    setCurrentTask({ ...currentTask, TeamMembers: text })
+                  }
+                  value={currentTask.TeamMembers}
+                  style={styles.modalInput}
+                  editable={!loading}
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.modalActionButton}
+                    onPress={handleEditTask}
+                    disabled={loading} // Desativa o botão durante o loading
+                  >
+                    <Text style={styles.modalActionButtonText}>
+                      Save Changes
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.modalCancelButton}
+                    onPress={() => !loading && setEditTaskModal(false)}
+                  >
+                    <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
                 </View>
-            </Modal>
-
-        </SafeAreaView>
-    );
+              </>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      
+    </SafeAreaView>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  header: {
+    height: 80,
+    backgroundColor: "#fff",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  headerText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  searchContainer: {
+    padding: 16,
+  },
+  input: {
+    height: 40,
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  createButton: {
+    backgroundColor: "#000",
+    padding: 10,
+    borderRadius: 4,
+  },
+  buttonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  flatList: {
+    flex: 1,
+  },
+  flatListContent: {
+    paddingBottom: 20,
+  },
+  taskItem: {
+    backgroundColor: "#fff",
+    padding: 20,
+    marginVertical: 8,
+    marginHorizontal: 16,
+    borderRadius: 4,
+    elevation: 1,
+  },
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContainer: {
+    width: 300,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 20,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  modalInput: {
+    height: 40,
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalActionButton: {
+    backgroundColor: "#000",
+    padding: 10,
+    borderRadius: 4,
+    flex: 1,
+    marginRight: 5,
+  },
+  modalCancelButton: {
+    backgroundColor: "#8c8c8c",
+    padding: 10,
+    borderRadius: 4,
+    flex: 1,
+    marginLeft: 5,
+  },
+  modalActionButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  modalCancelButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  messageContainer: {
+    backgroundColor: "#dff0d8",
+    padding: 10,
+    margin: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  messageText: {
+    color: "#3c763d",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  loadingContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+});
