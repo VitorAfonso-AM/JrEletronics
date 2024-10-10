@@ -12,6 +12,7 @@ import {
   Animated,
 } from "react-native";
 import { Task, Tasks } from "@hooks/useGetTasks";
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const generateRandomId = () => Math.floor(100000 + Math.random() * 900000);
 
@@ -114,6 +115,19 @@ export default function Home() {
     }
   };
 
+  const handleDeleteTask = (id: number) => {
+    setEditTaskModal(false);
+    setLoading(true);
+    setTimeout(() => {
+      const updatedTasks = tasks.filter((task) => task.id !== id);
+      setTasks(updatedTasks);
+      setFilteredTasks(updatedTasks);
+      setLoading(false);
+      showMessage("Tarefa excluída com sucesso!");
+    }, 5000); // Mantenha o mesmo delay da função de edição
+  };
+
+
   const renderItem = ({ item }: { item: Task }) => (
     <TouchableOpacity
       style={styles.taskItem}
@@ -154,7 +168,7 @@ export default function Home() {
         </TouchableOpacity>
       </View>
 
-      {/* Container dos cards*/}
+      {/* Container dos cards */}
       <FlatList
         style={styles.flatList}
         contentContainerStyle={styles.flatListContent}
@@ -170,9 +184,16 @@ export default function Home() {
       )}
 
       {loading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#000" />
-        </View>
+        <Modal
+          transparent={true}
+          animationType="fade"
+          visible={loading}
+          onRequestClose={() => { }}
+        >
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#000" />
+          </View>
+        </Modal>
       )}
 
       {/* Modal de Criação */}
@@ -180,11 +201,11 @@ export default function Home() {
         transparent={true}
         animationType="fade"
         visible={createTaskModal}
-        onRequestClose={() => setCreateTaskModal(false)} // Permite fechar durante o loading
+        onRequestClose={() => setCreateTaskModal(false)}
       >
         <TouchableOpacity
           activeOpacity={1}
-          onPress={() => setCreateTaskModal(false)} // Permite fechar durante o loading
+          onPress={() => setCreateTaskModal(false)}
           style={styles.modalBackground}
         >
           <View
@@ -197,7 +218,7 @@ export default function Home() {
               onChangeText={(text) => setNewTask({ ...newTask, name: text })}
               value={newTask.name}
               style={styles.modalInput}
-              editable={!loading} // Desabilita enquanto carrega
+              editable={!loading}
             />
             <TextInput
               placeholder="Description"
@@ -244,7 +265,7 @@ export default function Home() {
               <TouchableOpacity
                 style={styles.modalActionButton}
                 onPress={handleCreateTask}
-                disabled={loading} // Desativa o botão durante o loading
+                disabled={loading}
               >
                 <Text style={styles.modalActionButtonText}>Create</Text>
               </TouchableOpacity>
@@ -275,7 +296,18 @@ export default function Home() {
             style={styles.modalContainer}
             onStartShouldSetResponder={() => true}
           >
-            <Text style={styles.modalTitle}>Edit Task</Text>
+
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Task</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => !loading && setEditTaskModal(false)}
+              >
+                <Icon name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+
             {currentTask && (
               <>
                 <TextInput
@@ -291,7 +323,7 @@ export default function Home() {
                   }
                   value={currentTask.name}
                   style={styles.modalInput}
-                  editable={!loading} // Desabilita enquanto carrega
+                  editable={!loading}
                 />
                 <TextInput
                   placeholder="Description"
@@ -342,17 +374,17 @@ export default function Home() {
                   <TouchableOpacity
                     style={styles.modalActionButton}
                     onPress={handleEditTask}
-                    disabled={loading} // Desativa o botão durante o loading
+                    disabled={loading}
                   >
                     <Text style={styles.modalActionButtonText}>
                       Save Changes
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.modalCancelButton}
-                    onPress={() => !loading && setEditTaskModal(false)}
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteTask(currentTask.id)}
                   >
-                    <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                    <Text style={styles.deleteButtonText}>Excluir</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -360,7 +392,7 @@ export default function Home() {
           </View>
         </TouchableOpacity>
       </Modal>
-      
+
     </SafeAreaView>
   );
 }
@@ -420,56 +452,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  modalBackground: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContainer: {
-    width: 300,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
-    elevation: 10,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  modalInput: {
-    height: 40,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  modalActionButton: {
-    backgroundColor: "#000",
-    padding: 10,
-    borderRadius: 4,
-    flex: 1,
-    marginRight: 5,
-  },
-  modalCancelButton: {
-    backgroundColor: "#8c8c8c",
+  deleteButton: {
+    backgroundColor: "#ff4d4d",
     padding: 10,
     borderRadius: 4,
     flex: 1,
     marginLeft: 5,
   },
-  modalActionButtonText: {
-    color: "#fff",
-    textAlign: "center",
-    fontWeight: "600",
-  },
-  modalCancelButtonText: {
+  deleteButtonText: {
     color: "#fff",
     textAlign: "center",
     fontWeight: "600",
@@ -487,13 +477,77 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   loadingContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.3)",
   },
+  modalBackground: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContainer: {
+    width: 300,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 20,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  modalInput: {
+    height: 40,
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 10
+  },
+  modalActionButton: {
+    backgroundColor: "#000",
+    padding: 10,
+    borderRadius: 4,
+    flex: 1,
+    marginRight: 5,
+  },
+  modalActionButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  modalCancelButton: {
+    backgroundColor: "#8c8c8c",
+    padding: 10,
+    flex: 1,
+    borderRadius: 4,
+  },
+  modalCancelButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  modalCloseButton: {
+    padding: 5,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  }
 });
+
